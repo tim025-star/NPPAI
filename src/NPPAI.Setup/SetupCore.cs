@@ -13,6 +13,23 @@ internal sealed record Package(string Tag, string Commit, string ArchiveHash, lo
 internal sealed record PackageFile(string Path, long Bytes, string Sha256);
 internal sealed record SetupProgress(string Message, long Done = 0, long Total = 0);
 
+// Low-level operations report their own units. The installer maps those scopes onto
+// one continuous bar, retaining progress during status-only updates such as hashing.
+internal sealed class ProgressRange(IProgress<SetupProgress> destination, int start, int end) : IProgress<SetupProgress>
+{
+    long current = start;
+    public void Report(SetupProgress value)
+    {
+        if (value.Total > 0) current = Math.Max(current, start + (end - start) * Math.Clamp(value.Done, 0, value.Total) / value.Total);
+        destination.Report(new(value.Message, current, 1000));
+    }
+}
+
+internal sealed class ForwardProgress(Action<SetupProgress> report) : IProgress<SetupProgress>
+{
+    public void Report(SetupProgress value) => report(value);
+}
+
 internal static class SetupCore
 {
     internal static readonly JsonSerializerOptions Json = new() { PropertyNameCaseInsensitive = true };
@@ -101,6 +118,7 @@ internal static class SetupCore
 
     internal static async Task Download(HttpClient client, Uri uri, string path, Asset asset, IProgress<SetupProgress> progress, CancellationToken token)
     {
+        progress.Report(new($"Checking saved download: {asset.Name}"));
         if (await VerifyFile(path, asset, token)) { progress.Report(new($"Using verified download: {asset.Name}", asset.Bytes, asset.Bytes)); return; }
         if (File.Exists(path)) File.Delete(path);
         var partial = path + ".partial";
@@ -153,11 +171,12 @@ internal static class SetupCore
         return relative;
     }
 
-    internal static async Task Extract(Package package, string[] paths, string stage, IProgress<SetupProgress> progress, CancellationToken token)
+    internal static async Task Extract(Package package, string[] paths, string stage, IProgress<SetupProgress> verification, IProgress<SetupProgress> extraction, CancellationToken token)
     {
         using var reader = new ReleasePartReader(paths);
-        progress.Report(new("Verifying the complete archive"));
+        verification.Report(new("Verifying the complete archive"));
         if (!HashEquals(Convert.ToHexString(await SHA256.HashDataAsync(reader, token)), package.ArchiveHash)) throw new IOException("Complete archive checksum mismatch.");
+        verification.Report(new("Complete archive verified", 1, 1));
         reader.Position = 0;
         using var zip = new ZipArchive(reader, ZipArchiveMode.Read);
         var manifest = zip.GetEntry("NPPAI/PACKAGE-FILES.json") ?? throw new InvalidDataException("Missing package file manifest.");
@@ -168,6 +187,8 @@ internal static class SetupCore
         if (expected.Count > 10000 || expected.Values.Any(x => x.Bytes < 0 || !IsHash(x.Sha256)) || expected.Values.Sum(x => x.Bytes) > 20L * 1024 * 1024 * 1024 || zip.Entries.Count != records.Length + 1)
             throw new InvalidDataException("Invalid package file manifest.");
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        long totalBytes = zip.Entries.Sum(x => x.Length);
+        long completedBytes = 0;
         foreach (var entry in zip.Entries)
         {
             token.ThrowIfCancellationRequested();
@@ -177,7 +198,7 @@ internal static class SetupCore
             if (!isManifest && (!expected.TryGetValue(relative, out var record) || record.Bytes != entry.Length)) throw new InvalidDataException("Unexpected archive file.");
             var target = System.IO.Path.Combine(stage, relative.Replace('/', System.IO.Path.DirectorySeparatorChar));
             Directory.CreateDirectory(System.IO.Path.GetDirectoryName(target)!);
-            progress.Report(new($"Installing {relative}", seen.Count, zip.Entries.Count));
+            extraction.Report(new($"Installing {relative}", completedBytes, totalBytes));
             using var input = entry.Open();
             using var output = new FileStream(target, FileMode.CreateNew, FileAccess.Write, FileShare.None, 1024 * 1024, true);
             using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
@@ -190,8 +211,10 @@ internal static class SetupCore
                 if (written > entry.Length) throw new InvalidDataException("Archive size mismatch.");
                 hash.AppendData(buffer, 0, read);
                 await output.WriteAsync(buffer.AsMemory(0, read), token);
+                extraction.Report(new($"Installing {relative}", completedBytes + written, totalBytes));
             }
             if (written != entry.Length || (!isManifest && !HashEquals(Convert.ToHexString(hash.GetHashAndReset()), expected[relative].Sha256))) throw new IOException("Extracted file checksum mismatch: " + relative);
+            completedBytes += written;
         }
         foreach (var required in new[] { "NPPAI.dll", "NPPAI.Managed.dll", "coreclr.dll", "hostfxr.dll", "models/models.json", "runtime/cpu/llama-server.exe", "runtime/vulkan/llama-server.exe" })
             if (!seen.Contains(required)) throw new InvalidDataException("Incomplete plugin package: " + required);
@@ -226,11 +249,16 @@ internal static class SetupCore
         if (cacheDrive.AvailableFreeSpace < downloadSpace || targetDrive.AvailableFreeSpace < installSpace || (cacheDrive.Name.Equals(targetDrive.Name, StringComparison.OrdinalIgnoreCase) && targetDrive.AvailableFreeSpace < downloadSpace + installSpace))
             throw new IOException("Insufficient free space. Allow about 20 GB for downloads and installation, then retry.");
         var paths = new List<string>();
+        var downloads = new ProgressRange(progress, 0, 850);
+        long completedDownloads = 0;
         foreach (var asset in parts)
         {
             var path = System.IO.Path.Combine(cache, asset.Name);
             var url = asset.Id > 0 ? $"https://api.github.com/repos/tim025-star/NPPAI/releases/assets/{asset.Id}" : $"https://github.com/tim025-star/NPPAI/releases/download/{package.Tag}/{asset.Name}";
-            await Download(client, new Uri(url), path, asset, progress, token);
+            int partNumber = paths.Count + 1;
+            var partProgress = new ForwardProgress(p => downloads.Report(new($"Downloading part {partNumber} of {parts.Length}: {p.Message}", p.Total > 0 ? completedDownloads + p.Done : 0, p.Total > 0 ? package.ArchiveBytes : 0)));
+            await Download(client, new Uri(url), path, asset, partProgress, token);
+            completedDownloads += asset.Bytes;
             paths.Add(path);
         }
         var plugins = System.IO.Path.Combine(System.IO.Path.GetFullPath(notepadDirectory), "plugins");
@@ -246,7 +274,7 @@ internal static class SetupCore
         Directory.CreateDirectory(stage);
         try
         {
-            await Extract(package, paths.ToArray(), stage, progress, token);
+            await Extract(package, paths.ToArray(), stage, new ProgressRange(progress, 850, 900), new ProgressRange(progress, 900, 999), token);
             token.ThrowIfCancellationRequested();
             CheckClosed(notepadDirectory);
             NoLinks(target);
@@ -259,6 +287,7 @@ internal static class SetupCore
             try { if (hadPrevious) DeleteOwned(backup); }
             catch { warning = "The previous plugin backup was retained at " + backup; }
             foreach (var path in paths) { try { File.Delete(path); } catch { /* Harmless verified cache. */ } }
+            progress.Report(new("Installed and verified", 1000, 1000));
             return warning;
         }
         finally { if (Directory.Exists(stage)) DeleteOwned(stage); }

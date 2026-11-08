@@ -107,6 +107,22 @@ try
     await SetupCore.Install(package, npp, upgradeCache, http, progress, default);
     Check(!File.Exists(Path.Combine(target, "old-only.txt")) && Directory.GetDirectories(Path.Combine(npp, "plugins")).Length == 1, "upgrade replaces stale files and removes staging and backup");
     Check(!Directory.EnumerateFiles(upgradeCache).Any(), "successful installation removes downloaded parts");
+
+    // A completed cached part followed by a streamed part reproduces the visible reset.
+    // Keep observing through verification/extraction to catch resets between phases too.
+    var splitBytes = Archive(false);
+    int middle = splitBytes.Length / 2;
+    var splitCache = Cache(); Directory.CreateDirectory(splitCache);
+    var first = new Asset("NPPAI-v0.1.0-win-x64.zip.001", middle, SetupCore.Digest(splitBytes[..middle]));
+    var second = new Asset("NPPAI-v0.1.0-win-x64.zip.002", splitBytes.Length - middle, SetupCore.Digest(splitBytes[middle..]));
+    File.WriteAllBytes(Path.Combine(splitCache, first.Name), splitBytes[..middle]);
+    var splitPackage = new Package("v0.1.0", new string('1', 40), SetupCore.Digest(splitBytes), splitBytes.Length, new[] { first, second });
+    using var splitHttp = new HttpClient(new FixtureHandler(splitBytes[middle..]));
+    var observed = new List<SetupProgress>();
+    await SetupCore.Install(splitPackage, npp, splitCache, splitHttp, new CaptureProgress(observed), default);
+    var percentages = observed.Where(x => x.Total > 0).Select(x => x.Done * 1000 / x.Total).ToArray();
+    Check(percentages.Length > 3 && percentages.Zip(percentages.Skip(1), (a,b) => b >= a).All(x => x), "overall progress never restarts between parts or installation phases: " + string.Join(",", percentages.Take(8)));
+    Check(observed.Any(x => x.Message.Contains("part 2 of 2")), "progress identifies the current part and total part count");
     Console.WriteLine($"Passed {passed} installer checks.");
 }
 finally { SetupCore.DeleteOwned(root); }
@@ -118,8 +134,18 @@ sealed class FixtureHandler(byte[] data) : HttpMessageHandler
     protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken token)
     {
         Requests++; LastOffset = request.Headers.Range?.Ranges.First().From ?? 0;
-        var response = new HttpResponseMessage(LastOffset > 0 ? HttpStatusCode.PartialContent : HttpStatusCode.OK) { Content = new ByteArrayContent(data[(int)LastOffset..]) };
+        var response = new HttpResponseMessage(LastOffset > 0 ? HttpStatusCode.PartialContent : HttpStatusCode.OK) { Content = new StreamContent(new ChunkedStream(data[(int)LastOffset..])) };
         if (LastOffset > 0) response.Content.Headers.ContentRange = new ContentRangeHeaderValue(LastOffset, data.Length - 1, data.Length);
         return Task.FromResult(response);
     }
+}
+
+sealed class ChunkedStream(byte[] data) : MemoryStream(data)
+{
+    public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken token = default) => base.ReadAsync(buffer[..Math.Min(32, buffer.Length)], token);
+}
+
+sealed class CaptureProgress(List<SetupProgress> observed) : IProgress<SetupProgress>
+{
+    public void Report(SetupProgress value) => observed.Add(value);
 }
