@@ -29,6 +29,21 @@ jobs:
       - name: Test segmented release packaging
         shell: pwsh
         run: ./tests/NPPAI.Release/Test-SegmentedArchive.ps1
+      - name: Test download installer
+        run: dotnet run --project tests/NPPAI.Setup/NPPAI.Setup.Tests.csproj -c Release
+      - name: Build download installer
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download v0.1.0 --pattern release-assets.json --dir artifacts/setup-input
+          if ($LASTEXITCODE -ne 0) { throw "Release manifest download failed" }
+          ./scripts/Build-Setup.ps1 -ReleaseManifest artifacts/setup-input/release-assets.json
+          $exe = (Resolve-Path artifacts/setup/NPPAI-v0.1.0-Setup.exe).Path
+          $probe = Join-Path $env:RUNNER_TEMP setup-probe.json
+          $process = Start-Process $exe -ArgumentList @("--verify-setup", $probe) -Wait -PassThru -WindowStyle Hidden
+          if ($process.ExitCode -ne 0 -or !(Test-Path $probe)) { throw "Self-contained setup probe failed" }
+          Get-Content $probe
       - name: Build native plugin package
         shell: pwsh
         run: ./scripts/Build.ps1 -CodeOnly
@@ -39,5 +54,14 @@ jobs:
         with:
           name: NPPAI-win-x64-code-only
           path: artifacts/NPPAI/
+          if-no-files-found: error
+          retention-days: 7
+
+      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+        with:
+          name: NPPAI-download-setup
+          path: |
+            artifacts/setup/NPPAI-v0.1.0-Setup.exe
+            artifacts/setup/NPPAI-v0.1.0-Setup.exe.sha256
           if-no-files-found: error
           retention-days: 7
