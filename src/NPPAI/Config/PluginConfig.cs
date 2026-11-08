@@ -12,12 +12,18 @@ namespace NPPAI.Config
     {
         public bool enabled = true;
         public string model = "qwen2.5:3b";
+        public bool enable_corrections = true;
+        public string correction_model = "qwen3.5:9b";
+        public int correction_delay_ms = 1500;
+        public int correction_timeout_ms = 90000;
         public string endpoint = "http://localhost:11434";
         public int context_chars = 1000;
-        public int debounce_ms = 500;
+        public int debounce_ms = 250;
         public bool enable_learning = true;
         public bool enable_memory = true;
-        public int max_prediction_words = 8;
+        public int max_prediction_words = 6;
+        public string writing_profile = "soc";
+        public string[] protected_terms = Array.Empty<string>();
         public double temperature = 0.2;
         public bool enable_ghost_text = true;
         public string ghost_color = "#808080";
@@ -94,6 +100,9 @@ namespace NPPAI.Config
         /// <summary>Clamp values into safe ranges.</summary>
         public void Clamp()
         {
+            correction_delay_ms = Math.Clamp(correction_delay_ms, 500, 10000);
+            if (writing_profile != "general") writing_profile = "soc";
+            correction_timeout_ms = Math.Clamp(correction_timeout_ms, 1000, 180000);
             context_chars = Math.Max(100, Math.Min(4000, context_chars));
             debounce_ms = Math.Max(100, Math.Min(1000, debounce_ms));
             max_prediction_words = Math.Max(1, Math.Min(50, max_prediction_words));

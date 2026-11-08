@@ -1,0 +1,402 @@
+[
+  {
+    "model": "qwen2.5:3b",
+    "profile": "baseline",
+    "caseId": 1,
+    "context": "FP. Entra logs look okay, IPs are clean.\nThe user appears to be us",
+    "raw": "usunchecking logs now, everything seems fine.",
+    "completion": "unchecking logs now, everything seems fine.",
+    "firstUsableMs": 46,
+    "totalMs": 113
+  },
+  {
+    "model": "qwen2.5:3b",
+    "profile": "baseline",
+    "caseId": 2,
+    "context": "The user is based in the UK and likely uses a ",
+    "raw": "UK keyboard",
+    "completion": "UK keyboard",
+    "firstUsableMs": 44,
+    "totalMs": 63
+  },
+  {
+    "model": "qwen2.5:3b",
+    "profile": "baseline",
+    "caseId": 3,
+    "context": "AU is Palo, NZ is an RBNZ IP and UK is an ISP.\nThe locations may be explained by ",
+    "raw": "their respective central banks or treasuries.",
+    "completion": "their respective central banks or treasuries.",
+    "firstUsableMs": 30,
+    "totalMs": 97
+  },
+  {
+    "model": "qwen2.5:3b",
+    "profile": "baseline",
+    "caseId": 4,
+    "context": "MFA passed and the IPs are clean.\nThere is no evidence of ",
+    "raw": "illegality",
+    "completion": "illegality",
+    "firstUsableMs": 28,
+    "totalMs": 56
+  },
+  {
+    "model": "qwen2.5:3b",
+    "profile": "baseline",
+    "caseId": 5,
+    "context": "Sign-in locations include AU, NZ and UK. This may indicate ",
+    "raw": "global expansion strategy.",
+    "completion": "global expansion strategy.",
+    "firstUsableMs": 30,
+    "totalMs": 64
+  },
+  {
+    "model": "qwen2.5:3b",
+    "profile": "baseline",
+    "caseId": 6,
+    "context": "FP. Entra logs look ",
+    "raw": "into",
+    "completion": "into",
+    "firstUsableMs": 25,
+    "totalMs": 34
+  },
+  {
+    "model": "qwen2.5:3b",
+    "profile": "baseline",
+    "caseId": 7,
+    "context": "At this time, we are unable to ",
+    "raw": "find",
+    "completion": "find",
+    "firstUsableMs": 26,
+    "totalMs": 34
+  },
+  {
+    "model": "qwen2.5:3b",
+    "profile": "baseline",
+    "caseId": 8,
+    "context": "Need to confirm with the user whether ",
+    "raw": "do they accept the terms",
+    "completion": "do they accept the terms",
+    "firstUsableMs": 25,
+    "totalMs": 67
+  },
+  {
+    "model": "qwen2.5:3b",
+    "profile": "baseline",
+    "caseId": 9,
+    "context": "The user appears to be using software to log in from ",
+    "raw": "different locations",
+    "completion": "different locations",
+    "firstUsableMs": 29,
+    "totalMs": 47
+  },
+  {
+    "model": "qwen2.5:3b",
+    "profile": "baseline",
+    "caseId": 10,
+    "context": "Proxy use is suspected but has not been ",
+    "raw": "confirmed",
+    "completion": "confirmed",
+    "firstUsableMs": 26,
+    "totalMs": 35
+  },
+  {
+    "model": "qwen2.5:3b",
+    "profile": "soc",
+    "caseId": 1,
+    "context": "FP. Entra logs look okay, IPs are clean.\nThe user appears to be us",
+    "raw": "using a proxy.",
+    "completion": "ing a proxy.",
+    "firstUsableMs": 88,
+    "totalMs": 122
+  },
+  {
+    "model": "qwen2.5:3b",
+    "profile": "soc",
+    "caseId": 2,
+    "context": "The user is based in the UK and likely uses a ",
+    "raw": "proxy or VPN.",
+    "completion": "proxy or VPN.",
+    "firstUsableMs": 88,
+    "totalMs": 123
+  },
+  {
+    "model": "qwen2.5:3b",
+    "profile": "soc",
+    "caseId": 3,
+    "context": "AU is Palo, NZ is an RBNZ IP and UK is an ISP.\nThe locations may be explained by ",
+    "raw": "proxy use or travel.",
+    "completion": "proxy use or travel.",
+    "firstUsableMs": 37,
+    "totalMs": 80
+  },
+  {
+    "model": "qwen2.5:3b",
+    "profile": "soc",
+    "caseId": 4,
+    "context": "MFA passed and the IPs are clean.\nThere is no evidence of ",
+    "raw": "malicious activity.",
+    "completion": "malicious activity.",
+    "firstUsableMs": 32,
+    "totalMs": 66
+  },
+  {
+    "model": "qwen2.5:3b",
+    "profile": "soc",
+    "caseId": 5,
+    "context": "Sign-in locations include AU, NZ and UK. This may indicate ",
+    "raw": "proxy use or travel.",
+    "completion": "proxy use or travel.",
+    "firstUsableMs": 33,
+    "totalMs": 77
+  },
+  {
+    "model": "qwen2.5:3b",
+    "profile": "soc",
+    "caseId": 6,
+    "context": "FP. Entra logs look ",
+    "raw": "similar.",
+    "completion": "similar.",
+    "firstUsableMs": 37,
+    "totalMs": 61
+  },
+  {
+    "model": "qwen2.5:3b",
+    "profile": "soc",
+    "caseId": 7,
+    "context": "At this time, we are unable to ",
+    "raw": "confirm or deny.",
+    "completion": "confirm or deny.",
+    "firstUsableMs": 28,
+    "totalMs": 63
+  },
+  {
+    "model": "qwen2.5:3b",
+    "profile": "soc",
+    "caseId": 8,
+    "context": "Need to confirm with the user whether ",
+    "raw": "they initiated these sign-ins.",
+    "completion": "they initiated these sign-ins.",
+    "firstUsableMs": 30,
+    "totalMs": 82
+  },
+  {
+    "model": "qwen2.5:3b",
+    "profile": "soc",
+    "caseId": 9,
+    "context": "The user appears to be using software to log in from ",
+    "raw": "multiple devices.",
+    "completion": "multiple devices.",
+    "firstUsableMs": 32,
+    "totalMs": 60
+  },
+  {
+    "model": "qwen2.5:3b",
+    "profile": "soc",
+    "caseId": 10,
+    "context": "Proxy use is suspected but has not been ",
+    "raw": "confirmed.",
+    "completion": "confirmed.",
+    "firstUsableMs": 28,
+    "totalMs": 48
+  },
+  {
+    "model": "qwen3.5:9b",
+    "profile": "baseline",
+    "caseId": 1,
+    "context": "FP. Entra logs look okay, IPs are clean.\nThe user appears to be us",
+    "raw": "ing a legitimate session from an internal workstation. However, since the account was flagged in our SIEM alerts earlier today, we need to verify if this activity is part of a compromised credential attack or simply a false positive. I\u0027ll cross-reference the login timestamps with known maintenance windows and check for any unusual privilege escalation attempts immediately after authentication.",
+    "completion": "",
+    "firstUsableMs": null,
+    "totalMs": 1123
+  },
+  {
+    "model": "qwen3.5:9b",
+    "profile": "baseline",
+    "caseId": 2,
+    "context": "The user is based in the UK and likely uses a ",
+    "raw": "British plug socket.",
+    "completion": "British plug socket.",
+    "firstUsableMs": 156,
+    "totalMs": 217
+  },
+  {
+    "model": "qwen3.5:9b",
+    "profile": "baseline",
+    "caseId": 3,
+    "context": "AU is Palo, NZ is an RBNZ IP and UK is an ISP.\nThe locations may be explained by ",
+    "raw": "the specific routing policies of each autonomous system.",
+    "completion": "the specific routing policies of each autonomous system.",
+    "firstUsableMs": 128,
+    "totalMs": 246
+  },
+  {
+    "model": "qwen3.5:9b",
+    "profile": "baseline",
+    "caseId": 4,
+    "context": "MFA passed and the IPs are clean.\nThere is no evidence of ",
+    "raw": "compromise.",
+    "completion": "compromise.",
+    "firstUsableMs": 114,
+    "totalMs": 162
+  },
+  {
+    "model": "qwen3.5:9b",
+    "profile": "baseline",
+    "caseId": 5,
+    "context": "Sign-in locations include AU, NZ and UK. This may indicate ",
+    "raw": "a global user base.",
+    "completion": "a global user base.",
+    "firstUsableMs": 101,
+    "totalMs": 182
+  },
+  {
+    "model": "qwen3.5:9b",
+    "profile": "baseline",
+    "caseId": 6,
+    "context": "FP. Entra logs look ",
+    "raw": " normal.",
+    "completion": "normal.",
+    "firstUsableMs": 97,
+    "totalMs": 134
+  },
+  {
+    "model": "qwen3.5:9b",
+    "profile": "baseline",
+    "caseId": 7,
+    "context": "At this time, we are unable to ",
+    "raw": "provide you with that information.",
+    "completion": "provide you with that information.",
+    "firstUsableMs": 95,
+    "totalMs": 186
+  },
+  {
+    "model": "qwen3.5:9b",
+    "profile": "baseline",
+    "caseId": 8,
+    "context": "Need to confirm with the user whether ",
+    "raw": "they want to proceed.",
+    "completion": "they want to proceed.",
+    "firstUsableMs": 95,
+    "totalMs": 174
+  },
+  {
+    "model": "qwen3.5:9b",
+    "profile": "baseline",
+    "caseId": 9,
+    "context": "The user appears to be using software to log in from ",
+    "raw": "a remote location.",
+    "completion": "a remote location.",
+    "firstUsableMs": 98,
+    "totalMs": 164
+  },
+  {
+    "model": "qwen3.5:9b",
+    "profile": "baseline",
+    "caseId": 10,
+    "context": "Proxy use is suspected but has not been ",
+    "raw": "confirmed yet.",
+    "completion": "confirmed yet.",
+    "firstUsableMs": 98,
+    "totalMs": 151
+  },
+  {
+    "model": "qwen3.5:9b",
+    "profile": "soc",
+    "caseId": 1,
+    "context": "FP. Entra logs look okay, IPs are clean.\nThe user appears to be us",
+    "raw": "using a proxy.",
+    "completion": "ing a proxy.",
+    "firstUsableMs": 369,
+    "totalMs": 440
+  },
+  {
+    "model": "qwen3.5:9b",
+    "profile": "soc",
+    "caseId": 2,
+    "context": "The user is based in the UK and likely uses a ",
+    "raw": "proxy or VPN.",
+    "completion": "proxy or VPN.",
+    "firstUsableMs": 378,
+    "totalMs": 445
+  },
+  {
+    "model": "qwen3.5:9b",
+    "profile": "soc",
+    "caseId": 3,
+    "context": "AU is Palo, NZ is an RBNZ IP and UK is an ISP.\nThe locations may be explained by ",
+    "raw": "proxy use or travel.",
+    "completion": "proxy use or travel.",
+    "firstUsableMs": 290,
+    "totalMs": 371
+  },
+  {
+    "model": "qwen3.5:9b",
+    "profile": "soc",
+    "caseId": 4,
+    "context": "MFA passed and the IPs are clean.\nThere is no evidence of ",
+    "raw": "compromise.",
+    "completion": "compromise.",
+    "firstUsableMs": 287,
+    "totalMs": 338
+  },
+  {
+    "model": "qwen3.5:9b",
+    "profile": "soc",
+    "caseId": 5,
+    "context": "Sign-in locations include AU, NZ and UK. This may indicate ",
+    "raw": "travel or proxy use.",
+    "completion": "travel or proxy use.",
+    "firstUsableMs": 293,
+    "totalMs": 374
+  },
+  {
+    "model": "qwen3.5:9b",
+    "profile": "soc",
+    "caseId": 6,
+    "context": "FP. Entra logs look ",
+    "raw": "normal for the user.",
+    "completion": "normal for the user.",
+    "firstUsableMs": 341,
+    "totalMs": 419
+  },
+  {
+    "model": "qwen3.5:9b",
+    "profile": "soc",
+    "caseId": 7,
+    "context": "At this time, we are unable to ",
+    "raw": "determine the source.",
+    "completion": "determine the source.",
+    "firstUsableMs": 253,
+    "totalMs": 336
+  },
+  {
+    "model": "qwen3.5:9b",
+    "profile": "soc",
+    "caseId": 8,
+    "context": "Need to confirm with the user whether ",
+    "raw": "they authorised these sessions.",
+    "completion": "they authorised these sessions.",
+    "firstUsableMs": 255,
+    "totalMs": 342
+  },
+  {
+    "model": "qwen3.5:9b",
+    "profile": "soc",
+    "caseId": 9,
+    "context": "The user appears to be using software to log in from ",
+    "raw": "multiple devices.",
+    "completion": "multiple devices.",
+    "firstUsableMs": 295,
+    "totalMs": 360
+  },
+  {
+    "model": "qwen3.5:9b",
+    "profile": "soc",
+    "caseId": 10,
+    "context": "Proxy use is suspected but has not been ",
+    "raw": "verified yet.",
+    "completion": "verified yet.",
+    "firstUsableMs": 267,
+    "totalMs": 321
+  }
+]

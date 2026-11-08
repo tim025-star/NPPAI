@@ -43,7 +43,10 @@ namespace NPPAI.Memory
                 return -1;
             try
             {
-                return _db.RecordAccept(trigger, prefix, suggestion, contextHash);
+                long id = _db.RecordAccept(trigger, prefix, suggestion, contextHash);
+                foreach (Match word in Regex.Matches(prefix + " " + suggestion, @"\b[\p{L}][\p{L}\p{N}_-]{2,39}\b"))
+                    if (char.IsUpper(word.Value[0])) _db.AddDictionaryTerm(word.Value, word.Value, "learned");
+                return id;
             }
             catch
             {

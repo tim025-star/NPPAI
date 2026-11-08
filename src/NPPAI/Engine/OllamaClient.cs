@@ -18,6 +18,9 @@ namespace NPPAI.Engine
 
     public class ChatRequest
     {
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+        public object format;
+        public bool think = false;
         public string model;
         public bool stream = true;
         public object options;
@@ -36,8 +39,12 @@ namespace NPPAI.Engine
         public OllamaClient(string endpoint, int timeoutMs = 20000)
         {
             _endpoint = (endpoint ?? "http://localhost:11434").TrimEnd('/');
+            if (!Uri.TryCreate(_endpoint, UriKind.Absolute, out var uri) || !uri.IsLoopback || (uri.Scheme != "http" && uri.Scheme != "https"))
+                throw new ArgumentException("Ollama must use a local HTTP endpoint.", nameof(endpoint));
             _http = new HttpClient(new SocketsHttpHandler
             {
+                AllowAutoRedirect = false,
+                UseProxy = false,
                 PooledConnectionLifetime = TimeSpan.FromMinutes(5),
                 ConnectTimeout = TimeSpan.FromSeconds(3)
             })
@@ -83,11 +90,16 @@ namespace NPPAI.Engine
             double temperature,
             int maxTokens,
             Action<string> onChunk,
-            CancellationToken ct)
+            CancellationToken ct,
+            object format = null)
         {
+            using var deadline = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            deadline.CancelAfter(_http.Timeout);
+            ct = deadline.Token;
             var req = new ChatRequest
             {
                 model = model,
+                format = format,
                 stream = true,
                 options = new
                 {
@@ -118,6 +130,8 @@ namespace NPPAI.Engine
                 try
                 {
                     using var doc = JsonDocument.Parse(line);
+                    if (doc.RootElement.TryGetProperty("error", out var error))
+                        throw new InvalidOperationException("Ollama: " + error.GetString());
                     if (doc.RootElement.TryGetProperty("message", out var msg) &&
                         msg.TryGetProperty("content", out var c))
                         delta = c.GetString();
@@ -126,7 +140,7 @@ namespace NPPAI.Engine
                 }
                 catch (JsonException)
                 {
-                    continue; // partial / malformed line — skip
+                    throw new InvalidDataException("Ollama returned malformed streaming JSON.");
                 }
 
                 if (delta != null && delta.Length > 0)

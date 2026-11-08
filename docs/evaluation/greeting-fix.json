@@ -1,0 +1,82 @@
+[
+  {
+    "model": "qwen2.5:3b",
+    "profile": "baseline",
+    "caseId": 1,
+    "context": "hello",
+    "raw": "hello hello there, how can i assist you today?",
+    "completion": " hello there, how can i assist you today?",
+    "firstUsableMs": 47,
+    "totalMs": 119
+  },
+  {
+    "model": "qwen2.5:3b",
+    "profile": "baseline",
+    "caseId": 2,
+    "context": "hel",
+    "raw": "helping you with your request.",
+    "completion": "ping you with your request.",
+    "firstUsableMs": 24,
+    "totalMs": 80
+  },
+  {
+    "model": "qwen2.5:3b",
+    "profile": "baseline",
+    "caseId": 3,
+    "context": "hello ",
+    "raw": "world",
+    "completion": "world",
+    "firstUsableMs": 29,
+    "totalMs": 37
+  },
+  {
+    "model": "qwen2.5:3b",
+    "profile": "baseline",
+    "caseId": 4,
+    "context": "Hello",
+    "raw": "Hello hello, what issue do you need assistance with today?",
+    "completion": " hello, what issue do you need assistance with today?",
+    "firstUsableMs": 49,
+    "totalMs": 138
+  },
+  {
+    "model": "qwen2.5:3b",
+    "profile": "soc",
+    "caseId": 1,
+    "context": "hello",
+    "raw": "{\u0022text\u0022:\u0022hello, how can I assist you?\u0022}",
+    "completion": ", how can I assist you?",
+    "firstUsableMs": 180,
+    "totalMs": 187
+  },
+  {
+    "model": "qwen2.5:3b",
+    "profile": "soc",
+    "caseId": 2,
+    "context": "hel",
+    "raw": "{\u0022text\u0022:\u0022hello, how\u0022}",
+    "completion": "lo, how",
+    "firstUsableMs": 116,
+    "totalMs": 124
+  },
+  {
+    "model": "qwen2.5:3b",
+    "profile": "soc",
+    "caseId": 3,
+    "context": "hello ",
+    "raw": "{\u0022text\u0022:\u0022world, how can I assist you?\u0022}",
+    "completion": "world, how can I assist you?",
+    "firstUsableMs": 151,
+    "totalMs": 158
+  },
+  {
+    "model": "qwen2.5:3b",
+    "profile": "soc",
+    "caseId": 4,
+    "context": "Hello",
+    "raw": "{\u0022text\u0022:\u0022Hello, how can I assist you?\u0022}",
+    "completion": ", how can I assist you?",
+    "firstUsableMs": 158,
+    "totalMs": 165
+  }
+]

@@ -31,7 +31,7 @@ namespace NPPAI.Memory
 
             string allText = "";
             foreach (var (prefix, suggestion, at, edited) in accepts)
-                allText += (suggestion ?? "") + "\n";
+                if (edited == 0) allText += (suggestion ?? "") + "\n";
 
             // --- sentence length ---
             var sentences = Regex.Split(allText, @"[.!?]+\s+|\n");

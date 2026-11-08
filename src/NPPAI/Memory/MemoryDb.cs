@@ -122,10 +122,12 @@ CREATE TABLE IF NOT EXISTS user_profile (
 INSERT INTO phrase_memory (trigger, preferred_text, accepted, rejected, promoted, updated_at)
 VALUES (@t, @s, 1, 0, 0, @now)
 ON CONFLICT(trigger) DO UPDATE SET
-  accepted = accepted + 1,
+  accepted = CASE WHEN preferred_text = excluded.preferred_text THEN accepted + 1 ELSE 1 END,
+  rejected = CASE WHEN preferred_text = excluded.preferred_text THEN rejected ELSE 0 END,
+  promoted = CASE WHEN preferred_text = excluded.preferred_text THEN promoted ELSE 0 END,
   preferred_text = excluded.preferred_text,
-  updated_at = @now;
-SELECT last_insert_rowid();";
+  updated_at = @now
+RETURNING id;";
                     upsert.Parameters.AddWithValue("@t", trigger);
                     upsert.Parameters.AddWithValue("@s", suggestion);
                     upsert.Parameters.AddWithValue("@now", Now());
@@ -142,10 +144,14 @@ VALUES (@pid, @ch, @p, @s, @now)";
                     ins.Parameters.AddWithValue("@s", suggestion);
                     ins.Parameters.AddWithValue("@now", Now());
                     ins.ExecuteNonQuery();
+                    using var identity = _conn.CreateCommand();
+                    identity.Transaction = tx;
+                    identity.CommandText = "SELECT last_insert_rowid()";
+                    long completionId = (long)identity.ExecuteScalar();
 
                     CheckPromotion(phraseId, tx);
                     tx.Commit();
-                    return phraseId;
+                    return completionId;
                 }
                 catch
                 {
@@ -169,7 +175,8 @@ INSERT INTO phrase_memory (trigger, preferred_text, accepted, rejected, promoted
 VALUES (@t, @s, 0, 1, 0, @now)
 ON CONFLICT(trigger) DO UPDATE SET
   rejected = rejected + 1,
-  updated_at = @now;";
+  updated_at = @now
+WHERE preferred_text = excluded.preferred_text;";
                     upsert.Parameters.AddWithValue("@t", trigger);
                     upsert.Parameters.AddWithValue("@s", suggestion);
                     upsert.Parameters.AddWithValue("@now", Now());
@@ -262,7 +269,7 @@ ORDER BY accepted DESC LIMIT @lim";
                 using var cmd = _conn.CreateCommand();
                 cmd.CommandText = @"
 SELECT trigger, preferred_text FROM phrase_memory
-WHERE accepted > 0 ORDER BY accepted DESC LIMIT @lim";
+WHERE promoted = 1 ORDER BY accepted DESC LIMIT @lim";
                 cmd.Parameters.AddWithValue("@lim", limit);
                 using var r = cmd.ExecuteReader();
                 while (r.Read())
@@ -334,6 +341,19 @@ INSERT OR IGNORE INTO custom_dictionary (term, expansion, category) VALUES (@t, 
             }
         }
 
+        public List<string> GetProtectedTerms()
+        {
+            lock (_lock)
+            {
+                using var cmd = _conn.CreateCommand();
+                cmd.CommandText = "SELECT term FROM custom_dictionary WHERE category <> 'learned' ORDER BY id DESC LIMIT 100";
+                using var reader = cmd.ExecuteReader();
+                var terms = new List<string>();
+                while (reader.Read()) terms.Add(reader.GetString(0));
+                return terms;
+            }
+        }
+
         // ------------------------------------------------------------------
         // Stats
         // ------------------------------------------------------------------
@@ -386,7 +406,7 @@ FROM accepted_completions ORDER BY id DESC LIMIT @lim";
                 cmd.CommandText = @"
 SELECT id FROM accepted_completions
 WHERE prefix LIKE @frag || '%'
-  AND accepted_at >= datetime('now', '@off')
+  AND accepted_at >= datetime('now', @off)
 ORDER BY id DESC LIMIT 1";
                 cmd.Parameters.AddWithValue("@frag", prefixFragment ?? "");
                 cmd.Parameters.AddWithValue("@off", $"-{withinSeconds} seconds");
