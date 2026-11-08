@@ -108,6 +108,23 @@ internal static class SetupCore
         }
     }
 
+    internal static void CheckDestinationWritable(string directory)
+    {
+        var plugins = System.IO.Path.Combine(System.IO.Path.GetFullPath(directory), "plugins");
+        NoLinks(plugins);
+        NoLinks(System.IO.Path.Combine(plugins, "NPPAI"));
+        try
+        {
+            Directory.CreateDirectory(plugins);
+            var probe = System.IO.Path.Combine(plugins, ".NPPAI-write-check-" + Guid.NewGuid().ToString("N"));
+            using var file = new FileStream(probe, FileMode.CreateNew, FileAccess.Write, FileShare.None, 1, FileOptions.DeleteOnClose);
+        }
+        catch (UnauthorizedAccessException error)
+        {
+            throw new IOException("Cannot write to the Notepad++ plugins folder. Run NPPAI-Setup.exe as administrator, then retry. Saved downloads will be reused.", error);
+        }
+    }
+
     internal static async Task<bool> VerifyFile(string path, Asset asset, CancellationToken token)
     {
         if (!File.Exists(path) || new FileInfo(path).Length != asset.Bytes) return false;
@@ -239,6 +256,7 @@ internal static class SetupCore
         var parts = Parts(package);
         ValidateNotepad(notepadDirectory);
         CheckClosed(notepadDirectory);
+        CheckDestinationWritable(notepadDirectory);
         NoLinks(cache);
         Directory.CreateDirectory(cache);
         long cached = parts.Sum(x => Math.Min(x.Bytes, File.Exists(System.IO.Path.Combine(cache, x.Name)) ? new FileInfo(System.IO.Path.Combine(cache, x.Name)).Length : File.Exists(System.IO.Path.Combine(cache, x.Name) + ".partial") ? new FileInfo(System.IO.Path.Combine(cache, x.Name) + ".partial").Length : 0));

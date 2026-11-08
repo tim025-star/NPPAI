@@ -123,6 +123,16 @@ try
     var percentages = observed.Where(x => x.Total > 0).Select(x => x.Done * 1000 / x.Total).ToArray();
     Check(percentages.Length > 3 && percentages.Zip(percentages.Skip(1), (a,b) => b >= a).All(x => x), "overall progress never restarts between parts or installation phases: " + string.Join(",", percentages.Take(8)));
     Check(observed.Any(x => x.Message.Contains("part 2 of 2")), "progress identifies the current part and total part count");
+
+    var blockedNpp = Path.Combine(root, "blocked-destination"); Directory.CreateDirectory(blockedNpp);
+    File.Copy(Path.Combine(npp, "notepad++.exe"), Path.Combine(blockedNpp, "notepad++.exe"));
+    File.WriteAllText(Path.Combine(blockedNpp, "plugins"), "A file prevents writing the plugin directory");
+    var blockedCache = Cache();
+    var archiveData = Archive(false);
+    var blockedPackage = new Package("v0.1.0", new string('1',40), SetupCore.Digest(archiveData), archiveData.Length, new[] { new Asset(first.Name, archiveData.Length, SetupCore.Digest(archiveData)) });
+    var blockedHandler = new FixtureHandler(archiveData); using var blockedHttp = new HttpClient(blockedHandler);
+    await Reject(() => SetupCore.Install(blockedPackage, blockedNpp, blockedCache, blockedHttp, progress, default), "reject unwritable installation destination");
+    Check(blockedHandler.Requests == 0 && !Directory.Exists(blockedCache), "check destination permissions before creating a download cache or downloading");
     Console.WriteLine($"Passed {passed} installer checks.");
 }
 finally { SetupCore.DeleteOwned(root); }
