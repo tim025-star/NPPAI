@@ -24,7 +24,7 @@ $payload = Join-Path $sourceRoot 'artifacts\NPPAI'
 New-Item -ItemType Directory -Force "$payload\runtime", "$payload\models", "$payload\licenses" | Out-Null
 $runtimeZip = Join-Path $outputRoot 'runtime-distribution.zip'
 Write-Host "Fetching pinned compatible runner $($manifest.runtime.distribution.version)"
-& curl.exe --fail --location --retry 3 --connect-timeout 30 --silent --show-error --output $runtimeZip $manifest.runtime.distribution.url
+& curl.exe --fail --location --retry 3 --connect-timeout 30 --silent --show-error --header "Accept: application/octet-stream" --output $runtimeZip $manifest.runtime.distribution.assetApiUrl
 if ($LASTEXITCODE -ne 0) { throw 'Runtime distribution download failed.' }
 if ((Get-FileHash -LiteralPath $runtimeZip).Hash -ne $manifest.runtime.distribution.sha256) { throw 'Runtime distribution checksum mismatch.' }
 $runtimeArchive = [IO.Compression.ZipFile]::OpenRead($runtimeZip)
