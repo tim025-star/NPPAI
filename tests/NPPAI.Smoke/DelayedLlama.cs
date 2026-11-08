@@ -4,13 +4,13 @@ using System.Text;
 using System.Text.Json;
 
 // Controlled provider response for the destructive-edit race tests.
-sealed class DelayedOllama : IDisposable
+sealed class DelayedLlama : IDisposable
 {
     readonly HttpListener listener = new();
     readonly TaskCompletionSource release = new(TaskCreationOptions.RunContinuationsAsynchronously);
     public TaskCompletionSource Received { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
     public string Endpoint { get; }
-    public DelayedOllama(string original, string replacement)
+    public DelayedLlama(string original, string replacement)
     {
         var reservation = new TcpListener(IPAddress.Loopback,0); reservation.Start();
         int port=((IPEndPoint)reservation.LocalEndpoint).Port; reservation.Stop();
@@ -23,8 +23,8 @@ sealed class DelayedOllama : IDisposable
                 var context=await listener.GetContextAsync();
                 Received.TrySetResult(); await release.Task;
                 string content=JsonSerializer.Serialize(new {edits=new[]{new {original,replacement}}});
-                byte[] response=Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new {message=new {content},done=true})+"\n");
-                context.Response.ContentType="application/x-ndjson";
+                byte[] response=Encoding.UTF8.GetBytes("data: "+JsonSerializer.Serialize(new {choices=new[]{new {delta=new {content},finish_reason="stop"}}})+"\n\ndata: [DONE]\n\n");
+                context.Response.ContentType="text/event-stream";
                 await context.Response.OutputStream.WriteAsync(response); context.Response.Close();
             }
             catch(Exception) when(!listener.IsListening) { }

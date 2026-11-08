@@ -59,7 +59,8 @@ public static class Plugin
     static MemoryDb db;
     static LearningEngine learning;
     static StyleProfiler profiler;
-    static OllamaClient client;
+    static LlamaClient client;
+    static IInferenceBackend backend;
     static CorrectionService corrections;
     static Control dispatcher;
     static System.Windows.Forms.Timer debounce;
@@ -67,6 +68,8 @@ public static class Plugin
     static EditorHook primary, secondary;
     static MainHook mainHook;
     static CancellationTokenSource pending;
+    static CancellationTokenSource runtimeStartup;
+    static Task runtimeWarmup;
     static long generation;
     static bool closed, inserting;
     static string suggestion = "", prefix = "", error = "", ghostHash;
@@ -80,7 +83,7 @@ public static class Plugin
     static readonly ContextCollector collector = new();
     static string directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "NPPAI");
     public static void Log(Exception ex) { try { Directory.CreateDirectory(directory); File.AppendAllText(Path.Combine(directory, "NPPAI.log"), DateTime.Now + " " + ex + Environment.NewLine); } catch { } }
-    public static void Init(NppData value, string storageDirectory = null)
+    public static void Init(NppData value, string storageDirectory = null, IInferenceBackend inferenceBackend = null)
     {
         if (storageDirectory != null) directory = storageDirectory;
         data = value;
@@ -90,7 +93,8 @@ public static class Plugin
         config = PluginConfig.Load();
         db = new MemoryDb(Path.Combine(directory, "memory.db"));
         learning = new LearningEngine(db); profiler = new StyleProfiler(db);
-        client = new OllamaClient(config.endpoint, config.request_timeout_ms);
+        backend = inferenceBackend ?? new LlamaRuntime(Path.GetDirectoryName(typeof(Plugin).Assembly.Location));
+        client = backend.CreateClient(config.model, config.request_timeout_ms);
         dispatcher = new Control(); _ = dispatcher.Handle;
         ghost = new Ghost();
         debounce = new System.Windows.Forms.Timer { Interval = config.debounce_ms };
@@ -103,7 +107,27 @@ public static class Plugin
             try { action(); }
             finally { inserting = false; }
             if (config.enabled && config.enable_ghost_text) debounce.Start();
-        }, () => db.GetProtectedTerms());
+        }, () => db.GetProtectedTerms(), backend.CreateClient);
+        runtimeWarmup = WarmModelsAsync();
+    }
+    static async Task WarmModelsAsync()
+    {
+        runtimeStartup?.Cancel(); runtimeStartup?.Dispose();
+        var source = runtimeStartup = new CancellationTokenSource();
+        var token = source.Token;
+        try
+        {
+            var selected = new[] {
+                config.enabled && config.enable_ghost_text ? config.model : null,
+                config.enable_corrections ? (string.IsNullOrWhiteSpace(config.correction_model) ? config.model : config.correction_model) : null
+            };
+            foreach (string model in selected.Where(m=>m!=null).Distinct()) {
+                using var probe = backend.CreateClient(model, 2000);
+                await probe.PingAsync(token);
+            }
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex) { if (!closed) Log(ex); }
     }
     static nint Editor()
     {
@@ -199,7 +223,7 @@ public static class Plugin
                 if (token.IsCancellationRequested) return;
                 display(text, true);
             }
-            catch (OperationCanceledException) { if (!token.IsCancellationRequested) Post(() => { if (generation == version) { ClearPrediction(); error = "Ollama request timed out."; } }); }
+            catch (OperationCanceledException) { if (!token.IsCancellationRequested) Post(() => { if (generation == version) { ClearPrediction(); error = "Inference request timed out."; } }); }
             catch (Exception ex) { Log(ex); Post(() => { if (generation == version) { ClearPrediction(); error = ex.Message; } }); }
             // Sources are released after the UI has detached them in Clear().
         });
@@ -239,49 +263,46 @@ public static class Plugin
         {
             var stats=db.GetStats();
             string message=$"Prediction model: {config.model}\nSuggestions: {(config.enabled ? "enabled" : "disabled")}\nPrediction requests completed: {requests}\nLast prediction latency: {latency} ms\nPrediction error: {error}\n\nCorrection model: {config.correction_model}\nAutomatic corrections: {(config.enable_corrections ? "enabled" : "disabled")}\nCorrection state: {corrections.Phase}\nCorrection requests: {corrections.RequestsStarted} started / {corrections.RequestsCompleted} finished / {corrections.RequestsCancelled} cancelled\nLast correction request: {corrections.LastRequestMs} ms\nCorrections applied: {corrections.Applied}\nProposals skipped: {corrections.Rejected}\nLast correction result: {corrections.LastOutcome}\nCorrection error: {corrections.LastError}\n\nMemory: {stats.accepts} acceptances, {stats.promoted} trusted phrases\nData: {directory}";
-            MessageBox.Show(message,"NPPAI");
+            MessageBox.Show($"Bundled llama.cpp: {backend.Status}\n\n" + message,"NPPAI");
         }
         catch(Exception ex){Log(ex);}
     }
-    static async void Settings()
+    static void Settings()
     {
         try
         {
             Clear();
-            using var form = new Form { Text = "NPPAI settings", Width = 460, Height = 470, StartPosition = FormStartPosition.CenterScreen };
-            var endpoint = new TextBox { Left = 120, Top = 20, Width = 300, Text = config.endpoint };
-            var model = new ComboBox { Left = 120, Top = 60, Width = 300, Text = config.model };
-            var debounceInput = new NumericUpDown { Left = 120, Top = 100, Minimum = 100, Maximum = 1000, Value = config.debounce_ms };
-            var memory = new CheckBox { Left = 120, Top = 140, Width = 250, Text = "Use personal memory", Checked = config.enable_memory };
-            var learn = new CheckBox { Left = 120, Top = 170, Width = 250, Text = "Learn from accepted suggestions", Checked = config.enable_learning };
-            var correct = new CheckBox { Left = 120, Top = 205, Width = 290, Text = "Automatically correct completed words", Checked = config.enable_corrections };
-            var correctionModel = new ComboBox { Left = 120, Top = 240, Width = 300, Text = config.correction_model };
-            form.Controls.Add(new Label { Left = 10, Top = 243, Width = 110, Text = "Correction model" });
-            var profile = new ComboBox { Left = 120, Top = 280, Width = 180, DropDownStyle = ComboBoxStyle.DropDownList };
+            using var form = new Form { Text = "NPPAI settings", Width = 460, Height = 430, StartPosition = FormStartPosition.CenterScreen };
+            var model = new ComboBox { Left = 120, Top = 20, Width = 300, DropDownStyle = ComboBoxStyle.DropDownList };
+            var correctionModel = new ComboBox { Left = 120, Top = 200, Width = 300, DropDownStyle = ComboBoxStyle.DropDownList };
+            model.Items.AddRange(backend.Models.Cast<object>().ToArray()); model.SelectedItem = config.model;
+            correctionModel.Items.AddRange(backend.Models.Cast<object>().ToArray()); correctionModel.SelectedItem = string.IsNullOrWhiteSpace(config.correction_model) ? config.model : config.correction_model;
+            var debounceInput = new NumericUpDown { Left = 120, Top = 60, Minimum = 100, Maximum = 1000, Value = config.debounce_ms };
+            var memory = new CheckBox { Left = 120, Top = 100, Width = 250, Text = "Use personal memory", Checked = config.enable_memory };
+            var learn = new CheckBox { Left = 120, Top = 130, Width = 250, Text = "Learn from accepted suggestions", Checked = config.enable_learning };
+            var correct = new CheckBox { Left = 120, Top = 165, Width = 290, Text = "Automatically correct completed words", Checked = config.enable_corrections };
+            var profile = new ComboBox { Left = 120, Top = 240, Width = 180, DropDownStyle = ComboBoxStyle.DropDownList };
             profile.Items.AddRange(new object[] { "soc", "general" }); profile.SelectedItem = config.writing_profile;
-            var words = new NumericUpDown { Left = 120, Top = 315, Minimum = 1, Maximum = 50, Value = config.max_prediction_words };
-            form.Controls.Add(new Label { Left = 10, Top = 283, Width = 110, Text = "Writing profile" });
-            form.Controls.Add(new Label { Left = 10, Top = 318, Width = 110, Text = "Prediction words" });
-            var save = new Button { Left = 320, Top = 370, Text = "Save", DialogResult = DialogResult.OK };
-            var refresh = new Button { Left = 120, Top = 370, Width = 150, Text = "Refresh models" };
-            foreach (var pair in new[] { ("Ollama endpoint",20), ("Prediction model",60), ("Debounce (ms)",100) }) form.Controls.Add(new Label { Left = 10, Top = pair.Item2 + 3, Width = 110, Text = pair.Item1 });
-            form.Controls.AddRange(new Control[] { endpoint, model, debounceInput, memory, learn, correct, correctionModel, profile, words, save, refresh });
-            async Task LoadModels() { try { using var probe = new OllamaClient(endpoint.Text, 5000); var names = await probe.ListModelsAsync(); if (!form.IsDisposed) { model.Items.Clear(); model.Items.AddRange(names.Cast<object>().ToArray()); correctionModel.Items.Clear(); correctionModel.Items.AddRange(names.Cast<object>().ToArray()); } } catch (Exception ex) { if (!form.IsDisposed) MessageBox.Show(form, ex.Message, "Ollama connection"); } }
-            refresh.Click += async (_, _) => await LoadModels();
-            form.Shown += async (_, _) => await LoadModels();
+            var words = new NumericUpDown { Left = 120, Top = 275, Minimum = 1, Maximum = 50, Value = config.max_prediction_words };
+            var save = new Button { Left = 320, Top = 330, Text = "Save", DialogResult = DialogResult.OK };
+            foreach (var pair in new[] { ("Prediction model",20), ("Debounce (ms)",60), ("Correction model",200), ("Writing profile",240), ("Prediction words",275) })
+                form.Controls.Add(new Label { Left = 10, Top = pair.Item2 + 3, Width = 110, Text = pair.Item1 });
+            form.Controls.AddRange(new Control[] { model, debounceInput, memory, learn, correct, correctionModel, profile, words, save });
             if (form.ShowDialog() != DialogResult.OK) return;
-            if (!Uri.TryCreate(endpoint.Text, UriKind.Absolute, out var uri) || !uri.IsLoopback || (uri.Scheme != "http" && uri.Scheme != "https")) { MessageBox.Show("Use a local Ollama HTTP endpoint.", "NPPAI"); return; }
-            config.endpoint = endpoint.Text; config.model = model.Text; config.debounce_ms = (int)debounceInput.Value; config.enable_memory = memory.Checked; config.enable_learning = learn.Checked; config.enable_corrections = correct.Checked; config.correction_model = correctionModel.Text;
+            if (model.SelectedItem == null || correctionModel.SelectedItem == null) { MessageBox.Show("The bundled model package is incomplete. Reinstall the full NPPAI package.", "NPPAI"); return; }
+            config.model = (string)model.SelectedItem; config.debounce_ms = (int)debounceInput.Value;
+            config.enable_memory = memory.Checked; config.enable_learning = learn.Checked; config.enable_corrections = correct.Checked;
+            config.correction_model = (string)correctionModel.SelectedItem;
             config.writing_profile = (string)profile.SelectedItem; config.max_prediction_words = (int)words.Value; config.Clamp(); config.Save();
             var oldClient = client;
-            client = new OllamaClient(config.endpoint, config.request_timeout_ms);
+            client = backend.CreateClient(config.model, config.request_timeout_ms);
             oldClient.Dispose();
+            runtimeWarmup = WarmModelsAsync();
         }
         catch (Exception ex) { Log(ex); }
         finally { if (!closed) corrections?.Schedule(); }
-        await Task.CompletedTask;
     }
-    static void Shutdown() { closed = true; Clear(); corrections?.Dispose(); primary?.ReleaseHandle(); secondary?.ReleaseHandle(); mainHook?.ReleaseHandle(); ghost?.Dispose(); debounce?.Dispose(); dispatcher?.Dispose(); client?.Dispose(); }
+    static void Shutdown() { closed = true; runtimeStartup?.Cancel(); runtimeStartup?.Dispose(); Clear(); corrections?.Dispose(); primary?.ReleaseHandle(); secondary?.ReleaseHandle(); mainHook?.ReleaseHandle(); ghost?.Dispose(); debounce?.Dispose(); dispatcher?.Dispose(); client?.Dispose(); backend?.Dispose(); }
     sealed class MainHook : NativeWindow
     {
         public MainHook(nint handle) { AssignHandle(handle); }

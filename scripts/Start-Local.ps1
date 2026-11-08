@@ -17,5 +17,5 @@ if (!(Test-Path $exe)) {
     Set-Content "$localNpp\doLocalConf.xml" ''
 }
 Copy-Item (Join-Path $env:ProgramFiles 'Notepad++\*.model.xml') $localNpp -Force
-Copy-Item "$root\artifacts\NPPAI\*" "$localNpp\plugins\NPPAI" -Recurse -Force
-Start-Process -FilePath $exe -ArgumentList '-multiInst -nosession' -WindowStyle Normal
+& "$PSScriptRoot\Install.ps1" -NotepadDirectory $localNpp
+Start-Process -FilePath $exe -ArgumentList '-multiInst' -WindowStyle Normal

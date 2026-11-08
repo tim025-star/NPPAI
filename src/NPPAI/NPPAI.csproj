@@ -15,6 +15,7 @@
     <RootNamespace>NPPAI</RootNamespace>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <SelfContained>false</SelfContained>
+    <DnneSelfContained_Experimental Condition="'$(SelfContained)' == 'true'">true</DnneSelfContained_Experimental>
     <EnableDynamicLoading>true</EnableDynamicLoading>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
   </PropertyGroup>
@@ -24,8 +25,20 @@
     <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.10" />
   </ItemGroup>
 
+  <!-- DNNE 2.x does not include its hosting-mode flag in native incremental-build inputs. -->
+  <Target Name="TrackNativeHostingMode" BeforeTargets="DnneBuildNativeExports">
+    <WriteLinesToFile File="$(IntermediateOutputPath)dnne-hosting-mode.txt"
+                      Lines="SelfContained=$(SelfContained)" Overwrite="true" WriteOnlyWhenDifferent="true" />
+    <ItemGroup>
+      <DnneNativeExportsInput Include="$(IntermediateOutputPath)dnne-hosting-mode.txt">
+        <OutputFileName>dnne-hosting-mode.txt</OutputFileName>
+      </DnneNativeExportsInput>
+      <FileWrites Include="$(IntermediateOutputPath)dnne-hosting-mode.txt" />
+    </ItemGroup>
+  </Target>
+
   <Target Name="PublishNativePlugin" AfterTargets="Publish">
-    <Copy SourceFiles="$(TargetDir)NPPAI.dll" DestinationFolder="$(PublishDir)" />
+    <Copy SourceFiles="$(DnneCompiledToBinPath)" DestinationFolder="$(PublishDir)" />
   </Target>
 
 </Project>

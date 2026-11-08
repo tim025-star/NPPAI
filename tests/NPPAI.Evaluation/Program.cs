@@ -16,13 +16,14 @@ string[] cases={
     "The user appears to be using software to log in from ",
     "Proxy use is suspected but has not been ",
 };
+using var runtime = new LlamaRuntime(Path.GetFullPath("artifacts/NPPAI"));
 var rows=new List<object>();
 if(args.Contains("--hello")) cases=new[]{"hello","hel","hello ","Hello"};
 foreach(string model in args.Contains("--hello")?new[]{"qwen2.5:3b"}:new[]{"qwen2.5:3b","qwen3.5:9b"})
 {
-    using var client=new OllamaClient("http://localhost:11434",90000);
+    using var client=runtime.CreateClient(model,90000);
     // Warm-up is deliberately excluded; cold-loading time is not typing latency.
-    await client.StreamChatAsync(model,new(){new(){role="user",content="Reply OK"}},0,4,null,default);
+    await client.StreamChatAsync(model,new(){new(){role="user",content="Reply OK"}},0,16,null,default);
     foreach(string profile in new[]{"baseline","soc"})
     foreach(var item in cases.Select((text,index)=>(text,index)))
     {

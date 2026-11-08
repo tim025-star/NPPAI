@@ -8,6 +8,7 @@ using NPPAI.Memory;
 static class Program
 {
     static void Assert(bool ok, string message) { if (!ok) throw new Exception(message); Console.WriteLine("PASS " + message); }
+    static string providerEndpoint;
     static BindingFlags flags = BindingFlags.NonPublic | BindingFlags.Static;
     static T Field<T>(string name) => (T)typeof(Plugin).GetField(name, flags)!.GetValue(null)!;
     static void Invoke(string name, params object[] args) => typeof(Plugin).GetMethod(name, flags)!.Invoke(null, args);
@@ -24,6 +25,8 @@ static class Program
         {
             Application.ThreadException += (_, e) => { Console.Error.WriteLine(e.Exception); Environment.Exit(2); };
             Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+            LlamaProtocolTests.Run(Assert).GetAwaiter().GetResult();
+            if (args.Contains("--runtime-lifecycle")) { RuntimeLifecycleTests.Run(Assert, args.SkipWhile(a=>a!="--package").Skip(1).FirstOrDefault() ?? "artifacts/NPPAI").GetAwaiter().GetResult(); return 0; }
             Assert(PromptBuilder.ResolveProfile("hello","soc")=="general","SOC mode does not force greetings into a security note");
             Assert(PromptBuilder.ResolveProfile("Entra MFA logs","soc")=="soc","SOC context retains its domain profile");
             Assert(PredictionResponse.Decode("{\"text\":\"hello, how are you?\"}","hello",6,"soc")==", how are you?","complete greeting gets a correctly joined continuation");
@@ -81,9 +84,14 @@ static class Program
             using (var memory = new MemoryDb(path)) Assert(memory.GetStats().accepts == 22, "memory survives reopen");
             using var editor = new FakeEditor();
             using var main = new MainWindow();
+            main.ShowInTaskbar = false; main.StartPosition = FormStartPosition.Manual; main.Location = new System.Drawing.Point(-32000, -32000);
             main.Width = 800; main.Show(); editor.Parent = main; editor.Width = 700; editor.Height = 100; editor.Show();
-            Plugin.Init(new NppData { Main = main.Handle, Primary = editor.Handle, Secondary = editor.Handle }, Path.Combine(Path.GetTempPath(), "nppai-smoke-" + Guid.NewGuid()));
+            Plugin.Init(new NppData { Main = main.Handle, Primary = editor.Handle, Secondary = editor.Handle }, Path.Combine(Path.GetTempPath(), "nppai-smoke-" + Guid.NewGuid()), new TestBackend(args.Contains("--lifecycle") ? null : new LlamaRuntime(Path.GetFullPath("artifacts/NPPAI"))));
             var config = Field<NPPAI.Config.PluginConfig>("config"); config.enabled = true; config.model = "qwen2.5:3b"; config.temperature = 0; config.writing_profile = "general";
+            config.correction_model = args.SkipWhile(a=>a!="--correction-model").Skip(1).FirstOrDefault() ?? config.correction_model;
+            // Health probes must finish before the mutable test backend points at single-response fixtures.
+            PumpUntil(() => Field<Task>("runtimeWarmup").IsCompleted, 250000);
+            Field<Task>("runtimeWarmup").GetAwaiter().GetResult();
             TestCorrectionLifecycle(editor,config);
             if(args.Contains("--lifecycle")) {Invoke("Shutdown"); return 0;}
             config.writing_profile="soc"; editor.TextValue="hello";
@@ -108,7 +116,7 @@ static class Program
             Console.WriteLine("Request scheduled: " + (Field<System.Threading.CancellationTokenSource>("pending") != null));
             int beforeRequest=greetingRequests+1;
             PumpUntil(() => Field<int>("requests") > beforeRequest || Field<string>("error").Length > 0);
-            Assert(Field<string>("error").Length == 0, "real Ollama request succeeds: " + Field<string>("error"));
+            Assert(Field<string>("error").Length == 0, "real llama.cpp request succeeds: " + Field<string>("error"));
             string prediction = Field<string>("suggestion");
             Console.WriteLine("Prediction: [" + prediction + "]");
             Assert(prediction.Length > 0, "qwen2.5:3b returns a continuation");
@@ -160,8 +168,10 @@ static class Program
             var corrector = Field<CorrectionService>("corrections");
             corrector.ForgetDocuments();
             int beforeCorrection=corrector.Applied;
+            int beforeCorrectionRequests=corrector.RequestsCompleted;
             Invoke("Schedule");
-            PumpUntil(() => corrector.Applied > beforeCorrection || corrector.LastError.Length > 0, 100000);
+            PumpUntil(() => corrector.RequestsCompleted > beforeCorrectionRequests || corrector.LastError.Length > 0, 100000);
+            Console.WriteLine($"Correction result: {corrector.LastOutcome}; applied={corrector.Applied-beforeCorrection}; skipped={corrector.Rejected}; text=[{editor.TextValue}]");
             Assert(corrector.LastError.Length == 0, "larger correction model request succeeds: " + corrector.LastError);
             Assert(editor.TextValue == "Looks like BAU Entra is good, MFA passed IPs ", "background correction replaces existing typo and preserves SOC terms");
             corrector.ObserveEdit(0x20|1); corrector.ObserveEdit(0x10|1);
@@ -197,9 +207,9 @@ static class Program
             while (undoWait.ElapsedMilliseconds < 800) { Application.DoEvents(); Thread.Sleep(10); }
             Assert(editor.TextValue == "Loks good ", "undo pauses autocorrection until the next direct user edit");
             corrector.ObserveEdit(0x10 | 1);
-            using(var server = new DelayedOllama("apperas","appears"))
+            using(var server = new DelayedLlama("apperas","appears"))
             {
-                config.endpoint=server.Endpoint;
+                providerEndpoint=server.Endpoint;
                 editor.TextValue="The user apperas legitimate.\n";
                 corrector.Schedule();
                 PumpUntil(()=>server.Received.Task.IsCompleted);
@@ -214,9 +224,9 @@ static class Program
                 corrector.Cancel();
             }
             corrector.ObserveEdit(0x20 | 1); corrector.ObserveEdit(0x10 | 1);
-            using(var server = new DelayedOllama("apperas","appears"))
+            using(var server = new DelayedLlama("apperas","appears"))
             {
-                config.endpoint=server.Endpoint;
+                providerEndpoint=server.Endpoint;
                 editor.TextValue="The user apperas legitimate.\n";
                 corrector.Schedule(); PumpUntil(()=>server.Received.Task.IsCompleted);
                 int at=Encoding.UTF8.GetByteCount("The user ");
@@ -235,11 +245,11 @@ static class Program
     static void TestCorrectionLifecycle(FakeEditor editor, NPPAI.Config.PluginConfig config)
     {
         var corrector=Field<CorrectionService>("corrections");
-        string endpoint=config.endpoint; int delay=config.correction_delay_ms, timeout=config.correction_timeout_ms;
+        string endpoint=providerEndpoint; int delay=config.correction_delay_ms, timeout=config.correction_timeout_ms;
         config.enable_ghost_text=false; config.correction_delay_ms=500;
-        using(var server=new DelayedOllama("apperas","appears"))
+        using(var server=new DelayedLlama("apperas","appears"))
         {
-            config.endpoint=server.Endpoint; editor.TextValue="The account apperas normal.\n";
+            providerEndpoint=server.Endpoint; editor.TextValue="The account apperas normal.\n";
             corrector.Schedule();
             NPPAI.Npp.ScintillaApi.Send(editor.Handle,8); // WM_KILLFOCUS, e.g. opening Status
             PumpUntil(()=>server.Received.Task.IsCompleted,3000);
@@ -249,22 +259,33 @@ static class Program
             Assert(editor.TextValue=="The account appears normal.\n","correction continues across editor and window focus changes");
         }
         corrector.ForgetDocuments(); config.correction_timeout_ms=1000;
-        using(var server=new DelayedOllama("apperas","appears"))
+        using(var server=new DelayedLlama("apperas","appears"))
         {
-            config.endpoint=server.Endpoint; editor.TextValue="This account apperas normal.\n";
+            providerEndpoint=server.Endpoint; editor.TextValue="This account apperas normal.\n";
             corrector.Schedule(); PumpUntil(()=>server.Received.Task.IsCompleted,3000);
             PumpUntil(()=>corrector.LastError.Contains("timed out",StringComparison.OrdinalIgnoreCase),4000);
             Assert(!editor.TextValue.Contains("appears"),"timed-out correction cannot change the document");
         }
         config.correction_timeout_ms=timeout;
-        using(var server=new DelayedOllama("apperas","appears"))
+        using(var server=new DelayedLlama("apperas","appears"))
         {
-            config.endpoint=server.Endpoint; editor.TextValue="Another account apperas normal.\n";
+            providerEndpoint=server.Endpoint; editor.TextValue="Another account apperas normal.\n";
             corrector.Schedule(); PumpUntil(()=>server.Received.Task.IsCompleted,3000); server.Release();
             PumpUntil(()=>editor.TextValue.Contains("appears"),3000);
             Assert(editor.TextValue=="Another account appears normal.\n","correction worker recovers after a provider timeout");
         }
-        corrector.ForgetDocuments(); config.endpoint=endpoint; config.correction_delay_ms=delay; config.enable_ghost_text=true;
+        corrector.ForgetDocuments(); providerEndpoint=endpoint; config.correction_delay_ms=delay; config.enable_ghost_text=true;
+    }
+    sealed class TestBackend : IInferenceBackend
+    {
+        readonly LlamaRuntime runtime;
+        public TestBackend(LlamaRuntime runtime) { this.runtime = runtime; }
+        public IReadOnlyList<string> Models => runtime?.Models ?? Array.Empty<string>();
+        public string Status => runtime?.Status ?? "Controlled test server";
+        public LlamaClient CreateClient(string model, int timeoutMs) => providerEndpoint != null
+            ? new LlamaClient(providerEndpoint, timeoutMs)
+            : runtime?.CreateClient(model, timeoutMs) ?? new LlamaClient(_ => throw new InvalidOperationException("No test server selected"), timeoutMs);
+        public void Dispose() => runtime?.Dispose();
     }
     sealed class MainWindow : Form
     {

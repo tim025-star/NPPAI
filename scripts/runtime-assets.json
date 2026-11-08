@@ -1,0 +1,235 @@
+{
+  "runtime": {
+    "vulkanFiles": [
+      {
+        "file": "vulkan/concrt140.dll",
+        "sha256": "7ab2f6a6c81eb6f8760b1f7a5431bf3d0e34128e05fd8235d6f6cb380c8da597"
+      },
+      {
+        "file": "vulkan/ggml-vulkan.dll",
+        "sha256": "1099ea7012be64e70d9a78ec88d832d5dbfa9fe047ef8f5c875f01b3fb9335f0"
+      },
+      {
+        "file": "vulkan/msvcp140_1.dll",
+        "sha256": "52f5e383eec6b93803c5fe960ae9e46baa10155c267b5766d95aea9629c44334"
+      },
+      {
+        "file": "vulkan/msvcp140_2.dll",
+        "sha256": "ad51b946b3cdebd633485fd0c8d49c5dbda4d597322caf7b5ce46266a17ff7fb"
+      },
+      {
+        "file": "vulkan/msvcp140_atomic_wait.dll",
+        "sha256": "e2e08469e268d707fcd3b50db80fbbb65d5e63cfd7d18cb419d558b43372c4d4"
+      },
+      {
+        "file": "vulkan/msvcp140_codecvt_ids.dll",
+        "sha256": "12b83a6b3f8a241efd399006a50b6cd6156000ad8431340c6a5d4578567a540e"
+      },
+      {
+        "file": "vulkan/msvcp140.dll",
+        "sha256": "3c697cd17cfab3dbd4e6f906137d11943aa5505bc7b214072459585b93dc845f"
+      },
+      {
+        "file": "vulkan/vccorlib140.dll",
+        "sha256": "21c153b1899846afe42f54dcc0444567256dec15b955e36571dad5a26b1807d9"
+      },
+      {
+        "file": "vulkan/vcruntime140_1.dll",
+        "sha256": "ba0b7b39be6e800b93875db33c6855e4aa1fa913fca2b2d43aea8eb94b4110cc"
+      },
+      {
+        "file": "vulkan/vcruntime140_threads.dll",
+        "sha256": "99f13cc64907131a26b2c061600404e8c34433c88237ff97efa208f4d247a3f4"
+      },
+      {
+        "file": "vulkan/vcruntime140.dll",
+        "sha256": "396fbe4ddb7f1a6549ecefc8d41fbd410bb5ecae7beb40b98a23d235f54e0db1"
+      }
+    ],
+    "compatibility": "https://github.com/ollama/ollama/tree/main/llama/compat",
+    "files": [
+      {
+        "file": "CPP_HTTPLIB_LICENSE",
+        "sha256": "bb546eae5924d8ee842e0e567e6d533c5824bdebccf605f99a5b3429034e6697"
+      },
+      {
+        "file": "CUDNN_LICENSE.txt",
+        "sha256": "b6fe452605fe29245f0cbafa724b42df94a5e170bedb9d45bc9cfaa4883ad907"
+      },
+      {
+        "file": "CUTLASS_LICENSE.txt",
+        "sha256": "48eb34a9124af8fdd2ad1858a64be9827ebc42e5389c6dd4b5a93e411ac7e693"
+      },
+      {
+        "file": "DLFCN_WIN32_COPYING",
+        "sha256": "4cc7ac997b9293db5919baf630100cc09b3508efdfe6a6611c95511fb863b3c7"
+      },
+      {
+        "file": "DLPACK_LICENSE",
+        "sha256": "9bda2385fa325d1df6dc39772eba3cc6d07bdfaf2c656cd644cd29f7509514fd"
+      },
+      {
+        "file": "FMT_LICENSE",
+        "sha256": "25b5db04aa6070c12ac518b91cbd0a59725c050ecb091456e6ebc3d3eeb369cf"
+      },
+      {
+        "file": "ggml-base.dll",
+        "sha256": "da9913762648d3d97829245096c9388a229e5b8e9a40d49513a56d69803a2a2c"
+      },
+      {
+        "file": "ggml-cpu-alderlake.dll",
+        "sha256": "099fd0100509bed33dc5af30c5078a4420c8927244c377acc657b03e83f48d52"
+      },
+      {
+        "file": "ggml-cpu-cannonlake.dll",
+        "sha256": "a568552c7576a5fce1d160a02be08c5a6e0c4054594b201b7acce56985b07407"
+      },
+      {
+        "file": "ggml-cpu-cascadelake.dll",
+        "sha256": "676cc1471c5f70f0ef7f6a577a8a90d5f4319e228fb9ae5fd94525fa5afb6f93"
+      },
+      {
+        "file": "ggml-cpu-cooperlake.dll",
+        "sha256": "04e562a9d834a33035d11707dd0bb13046ce5a1ab99e6e1cdea81a12dae845ed"
+      },
+      {
+        "file": "ggml-cpu-haswell.dll",
+        "sha256": "e278b1e3c6a48854c110ed29abb5eb083f48e53779157aecc31c8637dec4f703"
+      },
+      {
+        "file": "ggml-cpu-icelake.dll",
+        "sha256": "757c790512a44a9cc2d141d84d13064cbab98313e29365deed8da682964c2a1c"
+      },
+      {
+        "file": "ggml-cpu-ivybridge.dll",
+        "sha256": "60d025fe37e893652682b951efda5b76f6ec0e4ad2f07efcd329b0e6f3c39142"
+      },
+      {
+        "file": "ggml-cpu-piledriver.dll",
+        "sha256": "7d7ef8198de069f6339e95eee5b57716e6b94d59c0c1c2ff2e4ee2d6aba28fe7"
+      },
+      {
+        "file": "ggml-cpu-sandybridge.dll",
+        "sha256": "c194af819cda4d20428ec97123a40de0f85013f76f8157e26d719fed805a04b2"
+      },
+      {
+        "file": "ggml-cpu-sapphirerapids.dll",
+        "sha256": "bb40ff01d64648e081e2b206457d0bc2382fa3daef88a65a38132cdce00c9f94"
+      },
+      {
+        "file": "ggml-cpu-skylakex.dll",
+        "sha256": "2a14086af5d1b2941fa4ede37a677023490aa94021c8253df7de9bc5c839db8e"
+      },
+      {
+        "file": "ggml-cpu-sse42.dll",
+        "sha256": "4deaa8e7e2fa7b3dc5d4f50bfcf466057f951e61b938b3a9f94ad5db27c6e89c"
+      },
+      {
+        "file": "ggml-cpu-x64.dll",
+        "sha256": "515a8f34ea43c6fbff524c161f7cb9fb5f09e854e5c253ab713813db05547e14"
+      },
+      {
+        "file": "ggml-cpu-zen4.dll",
+        "sha256": "ec9beeac17d98f3de9cd115800a40057c3f8e334c59c35de39d6a9d3943c7e25"
+      },
+      {
+        "file": "ggml.dll",
+        "sha256": "1855a5bb33cc4a42e3fe5b9e6a9eac7c5e4b969366abe472337750e31b5d16cd"
+      },
+      {
+        "file": "GO_LICENSE",
+        "sha256": "7fee9b29a1541b5a9ec03c5d57e095ad280f67a824cf3818445ba6996f86fe85"
+      },
+      {
+        "file": "JSON_LICENSE.MIT",
+        "sha256": "86b998c792894ccb911a1cb7994f7a9652894e7a094c0b5e45be2f553f45cf14"
+      },
+      {
+        "file": "libc++.dll",
+        "sha256": "2ca4c00c8b4f7daf8965d93feb92ec275c3355286b679cc67687c0ac5b7da81d"
+      },
+      {
+        "file": "libllama-common.dll",
+        "sha256": "73cee75ae67f3876548551e377109506f86ea9b912dc14faa8d5166a72e9594e"
+      },
+      {
+        "file": "libllama-server-impl.dll",
+        "sha256": "175498a864ea95d8d72ffbb018127b411549622c9c27c836c2c67a381bc823e2"
+      },
+      {
+        "file": "libllama.dll",
+        "sha256": "18aa7d8ffb2f84fb1453595fea31d9b848adeb77292180e46df30393ea9ba44f"
+      },
+      {
+        "file": "libmtmd.dll",
+        "sha256": "5f5ae1a2c9137ab3dc227abf6b9df5726a2266bc6f6d86cb9fe9f419917c1628"
+      },
+      {
+        "file": "libomp.dll",
+        "sha256": "132279c0558a11ed8e686af29576af9fc25bba759dac20410102f94c5e45a14a"
+      },
+      {
+        "file": "libunwind.dll",
+        "sha256": "9b3a107b54885224edeeba178e23ac2c441d1b24a44fb9d9b8c5b8c9ea073c71"
+      },
+      {
+        "file": "libwinpthread-1.dll",
+        "sha256": "99fc12979b2fe1de87c408f64add69bbfc7eec4a027448cfbb03b456edf22750"
+      },
+      {
+        "file": "LLAMA_CPP_LICENSE",
+        "sha256": "bcd8ec749126d45cb06737d0690295d73df4b6e7e194205bcf91190368f27285"
+      },
+      {
+        "file": "LLAMA_CPP_VENDORS_LICENSE",
+        "sha256": "7547ae6372a35e7382898dd9f5519ebc16e93095f69c2466b5b74b617c33d4da"
+      },
+      {
+        "file": "llama-server.exe",
+        "sha256": "bb3d2f86e3d8907c4febc3d7a299a8d13d95ddc281c5f81fe496e0d32b12dca3"
+      },
+      {
+        "file": "MLX_C_LICENSE",
+        "sha256": "d8d63c7fa57071d80d30116d014e4189c52ef4cb2d1671f6d848e78d9f6cfad0"
+      },
+      {
+        "file": "MLX_LICENSE",
+        "sha256": "e93675e97d080c4fcfef6dd530448b9a6fd7c1ad43c736d593537079cd669d3d"
+      },
+      {
+        "file": "NVTX3_LICENSE.txt",
+        "sha256": "c3b19baa37cf18bac07b65700824acadcfa617316f02af10d3852ed20f4f6ab8"
+      },
+      {
+        "file": "PICOJSON_LICENSE",
+        "sha256": "02f4aea46c66a0c110bb4fd995817db2dc2af0b57c18336b367e6bc9c27eb91f"
+      },
+      {
+        "file": "XGRAMMAR_LICENSE",
+        "sha256": "1eb85fc97224598dad1852b5d6483bbcf0aa8608790dcc657a5a2a761ae9c8c6"
+      },
+      {
+        "file": "XGRAMMAR_NOTICE",
+        "sha256": "93971ad2b725c8398df171dbd7c8145fc9d11bf016294aa69a8a783b55a40775"
+      }
+    ],
+    "version": "0.7.0-dev-620d2225c-ollama-compat",
+    "source": "Ollama Windows distribution, llama.cpp runner only"
+  },
+  "models": [
+    {
+      "id": "qwen2.5:3b",
+      "file": "qwen2.5-3b.gguf",
+      "sha256": "5ee4f07cdb9beadbbb293e85803c569b01bd37ed059d2715faa7bb405f31caa6",
+      "repository": "qwen2.5",
+      "licenseSha256": "b5c0e5cf74cf51af1ecbc4af597cfcd13fd9925611838884a681070838a14a50"
+    },
+    {
+      "id": "qwen3.5:9b",
+      "file": "qwen3.5-9b.gguf",
+      "sha256": "dec52a44569a2a25341c4e4d3fee25846eed4f6f0b936278e3a3c900bb99d37c",
+      "repository": "qwen3.5",
+      "licenseSha256": "7339fa418c9ad3e8e12e74ad0fd26a9cc4be8703f9c110728a992b193be85cb2"
+    }
+  ]
+}

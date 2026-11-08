@@ -16,7 +16,6 @@ namespace NPPAI.Config
         public string correction_model = "qwen3.5:9b";
         public int correction_delay_ms = 1500;
         public int correction_timeout_ms = 90000;
-        public string endpoint = "http://localhost:11434";
         public int context_chars = 1000;
         public int debounce_ms = 250;
         public bool enable_learning = true;
@@ -107,8 +106,6 @@ namespace NPPAI.Config
             debounce_ms = Math.Max(100, Math.Min(1000, debounce_ms));
             max_prediction_words = Math.Max(1, Math.Min(50, max_prediction_words));
             request_timeout_ms = Math.Max(1000, Math.Min(120000, request_timeout_ms));
-            if (string.IsNullOrWhiteSpace(endpoint))
-                endpoint = "http://localhost:11434";
             if (string.IsNullOrWhiteSpace(model))
                 model = "qwen2.5:3b";
         }

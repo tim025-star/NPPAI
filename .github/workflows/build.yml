@@ -28,10 +28,13 @@ jobs:
         run: dotnet run --project tests/NPPAI.Smoke -c Release -- --lifecycle
       - name: Build native plugin package
         shell: pwsh
-        run: ./scripts/Build.ps1
+        run: ./scripts/Build.ps1 -CodeOnly
+      - name: Verify bundled .NET hosting from a native process
+        shell: pwsh
+        run: ./scripts/Test-NativePackage.ps1
       - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
         with:
-          name: NPPAI-win-x64
+          name: NPPAI-win-x64-code-only
           path: artifacts/NPPAI/
           if-no-files-found: error
           retention-days: 7
