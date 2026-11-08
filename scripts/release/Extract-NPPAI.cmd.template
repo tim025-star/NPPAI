@@ -1,0 +1,45 @@
+@echo off
+setlocal
+cd /d "%~dp0"
+echo NPPAI __TAG__ - verifying and extracting the full Windows x64 plugin
+where tar.exe >nul 2>nul
+if errorlevel 1 (
+  echo Windows tar.exe is required. Use this helper on Windows 11.
+  goto failed
+)
+for %%F in (__PARTS__) do if not exist "%%~F" (
+  echo Missing download: %%~F
+  goto failed
+)
+if exist "__BASE__\" (
+  echo The output folder __BASE__ already exists. Rename it before extracting again.
+  goto failed
+)
+if not exist "__BASE__.zip" (
+  echo Combining archive parts. This may take several minutes.
+  copy /b __COPY__ "__BASE__.zip" >nul
+  if errorlevel 1 goto failed
+)
+echo Checking the complete archive SHA-256.
+certutil.exe -hashfile "__BASE__.zip" SHA256 | find.exe /I "__HASH__" >nul
+if errorlevel 1 (
+  echo Archive checksum mismatch. Remove the combined ZIP and download damaged parts again.
+  goto failed
+)
+mkdir "__BASE__"
+if errorlevel 1 goto failed
+echo Extracting the complete plugin, models and runtimes.
+tar.exe -xf "__BASE__.zip" -C "__BASE__"
+if errorlevel 1 goto failed
+echo.
+echo Extraction complete. Save and close x64 Notepad++.
+echo Copy or move __BASE__\NPPAI into its plugins directory.
+echo Reopen Notepad++ normally. Ollama is not needed.
+echo See INSTALL-README.txt for installation steps and model licence terms.
+pause
+exit /b 0
+:failed
+echo.
+echo Extraction did not complete. Resolve the message above and try again.
+pause
+exit /b 1

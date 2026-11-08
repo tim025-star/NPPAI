@@ -1,0 +1,62 @@
+name: Full self-contained release package
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing draft release tag
+        required: true
+        default: v0.1.0
+      source_sha:
+        description: Exact application commit to package
+        required: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: full-release-${{ inputs.tag }}
+  cancel-in-progress: false
+
+jobs:
+  package:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    env:
+      RELEASE_TAG: ${{ inputs.tag }}
+      SOURCE_SHA: ${{ inputs.source_sha }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          persist-credentials: false
+      - name: Validate release inputs
+        shell: pwsh
+        run: |
+          if ($env:RELEASE_TAG -notmatch '^v[0-9]+\.[0-9]+\.[0-9]+$' -or $env:SOURCE_SHA -notmatch '^[0-9a-f]{40}$') { throw 'Invalid release inputs' }
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          ref: ${{ inputs.source_sha }}
+          path: source
+          persist-credentials: false
+      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1
+        with:
+          dotnet-version: 8.0.x
+      - name: Test segmented ZIP packaging
+        shell: pwsh
+        run: ./tests/NPPAI.Release/Test-SegmentedArchive.ps1
+      - name: Build and verify complete release
+        shell: pwsh
+        run: ./scripts/Create-ReleasePackage.ps1 -SourceDirectory "$env:GITHUB_WORKSPACE/source" -OutputDirectory "$env:GITHUB_WORKSPACE/release-output" -Tag $env:RELEASE_TAG -SourceSha $env:SOURCE_SHA
+      - name: Upload verified assets to the draft release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          $release = gh release view $env:RELEASE_TAG --json isDraft,targetCommitish | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0 -or !$release.isDraft -or $release.targetCommitish -ne $env:SOURCE_SHA) { throw 'Release must be a draft targeting the packaged commit' }
+          $files = @(Get-ChildItem "$env:GITHUB_WORKSPACE/release-output/upload" -File | ForEach-Object FullName)
+          gh release upload $env:RELEASE_TAG @files --clobber
+          if ($LASTEXITCODE -ne 0) { throw 'Release asset upload failed' }
+          gh release upload $env:RELEASE_TAG "$env:GITHUB_WORKSPACE/release-output/release-assets.json" --clobber
+          if ($LASTEXITCODE -ne 0) { throw 'Release manifest upload failed' }

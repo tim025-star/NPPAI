@@ -26,6 +26,9 @@ jobs:
           dotnet-version: 8.0.x
       - name: Run deterministic editor and lifecycle regressions
         run: dotnet run --project tests/NPPAI.Smoke -c Release -- --lifecycle
+      - name: Test segmented release packaging
+        shell: pwsh
+        run: ./tests/NPPAI.Release/Test-SegmentedArchive.ps1
       - name: Build native plugin package
         shell: pwsh
         run: ./scripts/Build.ps1 -CodeOnly

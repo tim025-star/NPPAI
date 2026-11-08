@@ -6,6 +6,8 @@ Self-contained local AI writing autocomplete and spelling correction for x64 Not
 
 For everyday use on this machine, open **Notepad++ with NPPAI** from the desktop. The working installation is `.local\Notepad++`. NPPAI starts its bundled inference engines automatically; you do not need to open Ollama or run a build script. Allow the models to load on startup, then type at the end of a line and pause. **Plugins → NPPAI → Status** shows model readiness and request errors.
 
+A complete portable package is available from [GitHub Releases](https://github.com/tim025-star/NPPAI/releases). Download all numbered ZIP parts and `Extract-NPPAI.cmd` into one folder, then run the helper to verify and extract them. Allow about 40 GB temporary free space. The automatic Source code downloads do not contain the models.
+
 To install elsewhere, use the complete `artifacts\NPPAI` folder. Save and close Notepad++, then copy that entire folder to `<Notepad++ directory>\plugins\NPPAI`, or run the included `Install.ps1` with `-NotepadDirectory` pointing to your x64 Notepad++ directory. Installation under Program Files may require an elevated PowerShell window. Reopen Notepad++ normally: NPPAI loads the enabled models in the background. The complete package is approximately 8.8 GB, mostly model weights. Keep all files and subfolders together.
 
 If the desktop shortcut is missing, run `.\scripts\Create-Shortcut.ps1` once. The ordinary installed Notepad++ shortcut opens a different installation and will not show NPPAI unless you separately install the package there. The dedicated shortcut launches directly without rebuilding and keeps the local copy's normal session behaviour.
@@ -31,6 +33,8 @@ Two-letter misspellings such as `se` → `see` can receive a one-edit repair. Ex
 Add exact names or specialised terms to the `protected_terms` array in the JSON configuration if needed. Explicit dictionary entries are also protected. Automatically learned capitalised vocabulary is useful for prediction but is not automatically trusted as a spelling exception, since it may itself contain typos.
 
 Disable **Automatically correct completed words** independently of predictions if desired. `correction_delay_ms` and `correction_timeout_ms` are configurable in the JSON file. Both requests run independently through dedicated model servers, but they still share your hardware resources.
+
+The bundled **qwen2.5:3b uses the Qwen RESEARCH LICENSE AGREEMENT**, permitting non-commercial research/evaluation; commercial use requires a separate licence. qwen3.5:9b uses Apache 2.0. Original model agreements and required attribution notices accompany the release.
 
 ## Local data
 
@@ -58,6 +62,8 @@ The smoke harness uses native editor-message fixtures, controlled delayed provid
 `--lifecycle` runs deterministic protocol/editor/focus/timeout checks without loading a model. GitHub Actions runs this mode, builds a code-only x64 package, and uses a native probe to confirm that NPPAI loads its bundled .NET runtime with global runtime lookup disabled. Full smoke and evaluation runs use the complete package in `artifacts\NPPAI` and start their own llama.cpp servers. Historical evaluation files describe the earlier Ollama backend and are not llama.cpp performance results.
 
 Local verification on 8 November 2026 passed all 94 smoke checks with the unchanged `qwen2.5:3b` and `qwen3.5:9b` model copies. Vulkan startup on an RX 7800 XT, CPU fallback, shared model loading, cancellation and owned-process shutdown also passed. A native host confirmed that NPPAI loads its bundled .NET runtime with global runtime lookup disabled. After installation, the reopened Notepad++ loaded the packaged runtime and both owned model servers reported healthy on loopback addresses. Verification output is saved in `artifacts/llama-*-verification.*`.
+
+The manual **Full self-contained release package** GitHub Actions workflow builds an exact application commit, downloads the pinned runtime distribution, and streams the unchanged models into release parts below GitHub's asset-size limit. It verifies every archived file and publishes checksums to an existing draft release; publication follows verification of the uploaded assets. `tests/NPPAI.Release/Test-SegmentedArchive.ps1` checks ZIP header backpatching and reads across part boundaries.
 
 The package is in `artifacts\NPPAI`. To install elsewhere, close that x64 Notepad++ instance and copy **all package files** into its `plugins\NPPAI` folder. The native `NPPAI.dll`, managed DLL, .NET runtime, `runtime`, `models` and `licenses` folders must stay together. Program Files installation may require an administrator.
 
